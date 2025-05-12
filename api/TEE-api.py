@@ -57,27 +57,31 @@ def generate_key():
         
 @app.route("/verify_signature", methods=["POST"])
 def verify_signature():
-    # Verify signature
     data = request.json
-    required_keys = ["signature", "message", "public_key"]
+    required_keys = ["key_id", "signature"]
 
-    # Verify args
     if not all(key in data for key in required_keys):
-        return jsonify({"error": "Invalid params"}), 400
-        
-    args = ["/usr/bin/verify_signature", data["signature"], data["message"], data["public_key"]]
+        return jsonify({"error": "Invalid params, expected 'key_id' and 'signature'"}), 400
+
+    key_id = data["key_id"]
+    signature = data["signature"]
+
+    args = ["/usr/bin/verifySign", key_id, signature]
 
     try:
-        # Run script
         result = subprocess.run(args, capture_output=True, text=True)
         success = result.returncode == 0
 
         return jsonify({
             "success": success,
-            "message": result.stdout.strip() if success else result.stderr.strip()
+            "output": result.stdout.strip() if success else result.stderr.strip()
         }), 200 if success else 400
+
     except Exception as e:
-        return jsonify({"error": "Error running verify_signature", "message": str(e)}), 500
+        return jsonify({
+            "error": "Error running verify_signature",
+            "details": str(e)
+        }), 500
 
 
 @app.route("/generate_zktoken", methods=["POST"])
@@ -104,6 +108,22 @@ def generate_zktoken():
         
     except Exception as e:
         return jsonify({"error": "Error running generate_zktoken", "message": str(e)}), 500
+
+
+@app.route("/sign_and_store", methods=["POST"])
+def sign_and_store():
+    try:
+        result = subprocess.run(["/usr/bin/sign"], capture_output=True, text=True)
+        success = result.returncode == 0
+
+        return jsonify({
+            "success": success,
+            "message": result.stdout.strip() if success else result.stderr.strip()
+        }), 200 if success else 400
+
+    except Exception as e:
+        return jsonify({"error": "Error running sign_and_store method", "message": str(e)}), 500
+
         
 
 if __name__ == '__main__':
